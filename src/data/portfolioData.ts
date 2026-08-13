@@ -6,6 +6,7 @@ import type {
   Education,
   TimelineEvent,
   NavItem,
+  ContactLink,
 } from '../types';
 
 // ── Navigation ────────────────────────────────────────────────────────────
@@ -76,6 +77,8 @@ export const PROJECTS: Project[] = [
     subtitle: 'Pipeline Data Lakehouse Financiero',
     date: '2026-05',
     dateLabel: 'Mayo 2026',
+    startDateLabel: 'Feb 2026',
+    endDateLabel: 'Mayo 2026',
     description:
       'Pipeline de datos end-to-end sobre arquitectura Medallón para ingesta, procesamiento y visualización de datos financieros de mercado.',
     longDescription:
@@ -92,6 +95,8 @@ export const PROJECTS: Project[] = [
     subtitle: 'Sistema SaaS ERP Empresarial',
     date: '2025-10',
     dateLabel: 'Octubre 2025',
+    startDateLabel: 'Oct 2025',
+    endDateLabel: 'Presente',
     description:
       'Sistema ERP SaaS de alto rendimiento con backend en FastAPI, base de datos relacional en Supabase/PostgreSQL y frontend modular en React + Vite.',
     longDescription:
@@ -235,23 +240,23 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
 export const CONTACT_EMAIL = 'melgarejorom@gmail.com';
 export const CONTACT_SUBJECT = 'Estoy en busca de contactarte';
 
-export const CONTACT_LINKS = [
+export const CONTACT_LINKS: ContactLink[] = [
   {
     label: 'Email',
     value: CONTACT_EMAIL,
     href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(CONTACT_SUBJECT)}`,
-    icon: '✉️',
+    icon: 'mail',
   },
   {
     label: 'LinkedIn',
     value: 'Alexander Lee',
     href: 'https://www.linkedin.com/in/alexander-lee',
-    icon: '💼',
+    icon: 'linkedin',
   },
   {
     label: 'GitHub',
     value: '@alexlee-dev',
     href: 'https://github.com/alexlee-dev',
-    icon: '🐙',
+    icon: 'github',
   },
 ];

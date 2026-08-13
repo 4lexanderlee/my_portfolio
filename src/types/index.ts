@@ -3,15 +3,18 @@ export interface Project {
   id: string;
   title: string;
   subtitle: string;
-  date: string;        // ISO date for sorting: "2026-05"
-  dateLabel: string;   // Human label: "Mayo 2026"
+  date: string;              // ISO date for sorting: "2026-05"
+  dateLabel: string;         // Human label end date: "Mayo 2026"
+  startDateLabel: string;    // Human label start: "Octubre 2025"
+  endDateLabel: string;      // Human label end: "Mayo 2026" | "Presente"
   description: string;
   longDescription: string;
   stack: string[];
   githubUrl: string;
   videoUrl: string;
-  accentColor: string; // CSS color for card top border
-  icon: string;        // emoji
+  accentColor: string;       // CSS color for card top border
+  icon: string;              // emoji fallback for logo
+  logoUrl?: string;          // optional project logo image URL
 }
 
 export interface Experience {
@@ -56,6 +59,16 @@ export interface TimelineEvent {
   description: string;
   category: TimelineCategory;
   icon: string;
+}
+
+// ── Contact Types ─────────────────────────────────────────────────────────
+export type ContactIconId = 'mail' | 'linkedin' | 'github';
+
+export interface ContactLink {
+  label: string;
+  value: string;
+  href: string;
+  icon: ContactIconId;
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────

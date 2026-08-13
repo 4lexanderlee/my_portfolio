@@ -11,6 +11,7 @@ import {
   Code2,
   Play,
   ExternalLink,
+  CalendarDays,
 } from 'lucide-react';
 
 const Projects: React.FC = () => {
@@ -117,17 +118,27 @@ const Projects: React.FC = () => {
                 style={{ animationDelay: `${index * 0.1}s` } as React.CSSProperties}
               >
                 <div className="flex flex-col gap-6">
-                  {/* Top row */}
+                  {/* Top row: logo + title + date */}
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-start gap-4">
+                      {/* Logo / Icon container */}
                       <div
                         className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl"
                         style={{
                           background: `${proj.accentColor}18`,
-                          border: `1px solid ${proj.accentColor}35`,
+                          border: `1.5px solid ${proj.accentColor}45`,
+                          boxShadow: `0 0 18px ${proj.accentColor}20`,
                         }}
                       >
-                        {proj.icon}
+                        {proj.logoUrl ? (
+                          <img
+                            src={proj.logoUrl}
+                            alt={`${proj.title} logo`}
+                            className="w-8 h-8 object-contain rounded-lg"
+                          />
+                        ) : (
+                          proj.icon
+                        )}
                       </div>
                       <div>
                         <h2
@@ -145,16 +156,20 @@ const Projects: React.FC = () => {
                       </div>
                     </div>
 
-                    <span
-                      className="font-mono text-xs px-3 py-1.5 rounded-lg flex-shrink-0"
-                      style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.07)',
-                        color: 'var(--color-text-muted)',
-                      }}
-                    >
-                      📅 {proj.dateLabel}
-                    </span>
+                    {/* Date range badge — top right */}
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span
+                        className="font-mono text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                        style={{
+                          background: `${proj.accentColor}12`,
+                          border: `1px solid ${proj.accentColor}30`,
+                          color: proj.accentColor,
+                        }}
+                      >
+                        <CalendarDays size={11} />
+                        {proj.startDateLabel} – {proj.endDateLabel}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Description */}

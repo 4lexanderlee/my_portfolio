@@ -20,8 +20,18 @@ const App: React.FC = () => {
   return (
     <>
       {/* ── Fixed background layers ── */}
-      <div className="bg-profile" aria-hidden="true" />
-      <div className="bg-overlay" aria-hidden="true" />
+      <div
+        className={`bg-profile${currentView === 'home' ? ' home-clear' : ''}`}
+        aria-hidden="true"
+      />
+      <div
+        className={`bg-overlay${currentView === 'home' ? ' home-clear' : ''}`}
+        aria-hidden="true"
+      />
+      {/* ── Desktop Home: fondo estático (solo visible en ≥1024px vía CSS) ── */}
+      {currentView === 'home' && (
+        <div className="bg-home-desktop" aria-hidden="true" />
+      )}
 
       {/* ── Navbar ── */}
       <Navbar

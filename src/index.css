@@ -62,6 +62,35 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
   filter: brightness(0.25) saturate(0.6);
+  transition: filter 0.6s ease, opacity 0.6s ease;
+}
+
+/* Desktop Home (≥1024px ONLY): fondo estático personalizado */
+/* iPad (<1024px) y móvil: NO entran aquí — sin cambios */
+@media (min-width: 1024px) {
+  .bg-profile.home-clear {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .bg-overlay.home-clear {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .bg-home-desktop {
+    display: block;
+  }
+}
+
+/* Capa de fondo estático para desktop Home */
+.bg-home-desktop {
+  display: none; /* oculto por defecto en móvil/iPad */
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background-image: url('/home-bg-desktop.png');
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
 }
 
 .bg-overlay {
@@ -72,6 +101,14 @@ body {
     radial-gradient(ellipse 60% 50% at 80% 20%, rgba(30, 58, 95, 0.45) 0%, transparent 70%),
     radial-gradient(ellipse 40% 60% at 0% 80%, rgba(6, 8, 16, 0.9) 0%, transparent 70%),
     linear-gradient(180deg, rgba(6, 8, 16, 0.75) 0%, rgba(6, 8, 16, 0.55) 40%, rgba(6, 8, 16, 0.85) 100%);
+  transition: opacity 0.6s ease;
+}
+
+/* Desktop Home: overlay casi invisible para dejar ver la foto */
+@media (min-width: 768px) {
+  .bg-overlay.home-clear {
+    opacity: 0.25;
+  }
 }
 
 /* ── Glassmorphism ───────────────────────────────────── */

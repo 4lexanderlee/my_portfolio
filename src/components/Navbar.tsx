@@ -109,44 +109,74 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onLoginClick }
         </div>
       </header>
 
-      {/* ── Mobile Menu ── */}
+      {/* ── Mobile Menu — Fullscreen Overlay ── */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 pt-16 animate-fade-in"
+          className="fixed inset-0 z-40 flex flex-col animate-fade-in"
           style={{
             background: 'rgba(6, 8, 16, 0.97)',
-            backdropFilter: 'blur(20px)',
+            backdropFilter: 'blur(24px)',
           }}
         >
-          <nav className="flex flex-col p-6 gap-2">
+          {/* Close button — top right */}
+          <div className="flex justify-end p-5">
+            <button
+              id="btn-mobile-close"
+              className="p-2 rounded-xl transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+              }}
+              onClick={() => setMobileOpen(false)}
+              aria-label="Cerrar menú"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          {/* Nav items — centered vertically and horizontally */}
+          <nav className="flex-1 flex flex-col items-center justify-center gap-4 px-8">
             {NAV_ITEMS.map((item) => {
               const isActive = currentView === item.view;
               return (
                 <button
                   key={item.view}
                   onClick={() => handleNav(item.view)}
-                  className="console-path text-left px-4 py-4 rounded-xl transition-all duration-200"
+                  className="console-path w-full max-w-xs text-center px-6 py-5 rounded-2xl transition-all duration-200"
                   style={{
                     background: isActive ? 'rgba(201, 169, 110, 0.1)' : 'rgba(255,255,255,0.03)',
                     color: isActive ? 'var(--color-console-green)' : 'var(--color-text-muted)',
-                    border: `1px solid ${isActive ? 'rgba(201,169,110,0.25)' : 'rgba(255,255,255,0.06)'}`,
+                    border: `1px solid ${isActive ? 'rgba(201,169,110,0.3)' : 'rgba(255,255,255,0.07)'}`,
                     cursor: 'pointer',
-                    fontSize: '1rem',
+                    fontSize: '1.05rem',
+                    letterSpacing: '0.03em',
                   }}
                 >
                   {item.label}
                 </button>
               );
             })}
-            <div className="mt-4">
+
+            {/* ACCEDER button at bottom */}
+            <div className="mt-6 w-full max-w-xs">
               <button
                 onClick={() => { onLoginClick(); setMobileOpen(false); }}
-                className="btn-primary w-full text-sm"
+                className="btn-primary w-full text-sm py-4"
+                style={{ letterSpacing: '0.1em' }}
               >
                 ACCEDER
               </button>
             </div>
           </nav>
+
+          {/* Bottom hint */}
+          <div className="py-6 text-center">
+            <p className="font-mono text-xs" style={{ color: 'var(--color-text-dim)' }}>
+              alexander@portfolio
+            </p>
+          </div>
         </div>
       )}
     </>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal';
 import Hero from './components/Hero';
@@ -6,9 +7,29 @@ import Home from './views/Home';
 import Projects from './views/Projects';
 import Timeline from './views/Timeline';
 import Contact from './views/Contact';
+import AdminDashboard from './views/admin/AdminDashboard';
+import ProtectedRoute from './components/admin/ProtectedRoute';
 import type { View } from './types';
 
-const App: React.FC = () => {
+// ── Hook: detect #admin hash ───────────────────────────────────────────────
+function useAdminRoute(): boolean {
+  const [isAdmin, setIsAdmin] = useState(
+    () => window.location.hash === '#admin'
+  );
+
+  useEffect(() => {
+    const handler = () => {
+      setIsAdmin(window.location.hash === '#admin');
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  return isAdmin;
+}
+
+// ── Portfolio App ─────────────────────────────────────────────────────────
+const PortfolioApp: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
   const [showLogin, setShowLogin] = useState(false);
 
@@ -28,7 +49,6 @@ const App: React.FC = () => {
         className={`bg-overlay${currentView === 'home' ? ' home-clear' : ''}`}
         aria-hidden="true"
       />
-      {/* ── Desktop Home: fondo estático (solo visible en ≥1024px vía CSS) ── */}
       {currentView === 'home' && (
         <div className="bg-home-desktop" aria-hidden="true" />
       )}
@@ -81,6 +101,23 @@ const App: React.FC = () => {
       {/* ── Login Modal ── */}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </>
+  );
+};
+
+// ── Root App with Auth + Route switching ──────────────────────────────────
+const App: React.FC = () => {
+  const isAdminRoute = useAdminRoute();
+
+  return (
+    <AuthProvider>
+      {isAdminRoute ? (
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      ) : (
+        <PortfolioApp />
+      )}
+    </AuthProvider>
   );
 };
 

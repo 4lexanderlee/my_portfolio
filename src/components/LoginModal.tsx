@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, Lock, Eye, EyeOff, Terminal } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { authService } from '../services/api';
 
 interface LoginModalProps {
   onClose: () => void;
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -49,9 +52,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
     }
     setLoading(true);
     setError('');
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setError('Sistema de autenticación en desarrollo. ¡Vuelve pronto!');
+    try {
+      const { token, user } = await authService.login({ username, password });
+      login(token.access_token, user);
+      onClose();
+      window.location.hash = 'admin';
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error de autenticación.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -115,14 +115,6 @@ const ProfileSection: React.FC = () => {
             })}
             placeholder="admin@portfolio.dev"
           />
-          <InputField
-            label="Ocupación / Cargo Actual"
-            id="profile-occupation"
-            required
-            error={errors.occupation}
-            registration={register('occupation', { required: 'Campo requerido' })}
-            placeholder="Data Engineer & Full-Stack Developer"
-          />
           <TextareaField
             label="Descripción / Bio"
             id="profile-description"

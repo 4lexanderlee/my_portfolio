@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown, Download } from 'lucide-react';
 import type { View } from '../types';
+import { iamService } from '../services/api';
 
 // ── Inline brand SVGs (lucide-react no incluye iconos de redes sociales) ──
 const GitHubIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
@@ -19,22 +20,28 @@ interface HeroProps {
   onNavigate: (view: View) => void;
 }
 
-const ROLES = [
-  'Software Engineer Student',
-  'Data Engineer Intern',
-  'Full-Stack Developer',
-  'ETL Pipeline Builder',
-];
+
 
 const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
+  const [roles, setRoles] = useState<string[]>(['Desarrollador de Software']);
   const [roleIndex, setRoleIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [typing, setTyping] = useState(true);
   const [charIndex, setCharIndex] = useState(0);
 
+  useEffect(() => {
+    iamService.list().then((data) => {
+      if (data && data.length > 0) {
+        setRoles(data.map(d => d.occupation_name));
+      }
+    }).catch(console.error);
+  }, []);
+
   // Typewriter effect
   useEffect(() => {
-    const currentRole = ROLES[roleIndex];
+    if (!roles || roles.length === 0) return;
+    const currentRole = roles[roleIndex] || roles[0];
+    
     if (typing) {
       if (charIndex < currentRole.length) {
         const timeout = setTimeout(() => {
@@ -54,11 +61,11 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
         }, 32);
         return () => clearTimeout(timeout);
       } else {
-        setRoleIndex((i) => (i + 1) % ROLES.length);
+        setRoleIndex((i) => (i + 1) % roles.length);
         setTyping(true);
       }
     }
-  }, [charIndex, typing, roleIndex]);
+  }, [charIndex, typing, roleIndex, roles]);
 
   return (
     <section

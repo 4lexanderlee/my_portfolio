@@ -124,7 +124,6 @@ export interface AdminProfile {
   last_name: string;
   email: string;
   description: string;
-  occupation: string;
   cv_url: string;
   linkedin_url: string;
   github_url: string;
@@ -249,9 +248,18 @@ export interface AdminIAM {
   created_at?: string;
 }
 
+export interface AdminIam {
+  iam_id: string;
+  occupation_name: string;
+  profile_id: string;
+}
+
+export type AdminIamPayload = Omit<AdminIam, 'iam_id' | 'profile_id'>;
+
 // ── Admin Navigation ──────────────────────────────────────────────────────
 export type AdminSection =
   | 'profile'
+  | 'iam'
   | 'experience'
   | 'projects'
   | 'skills'

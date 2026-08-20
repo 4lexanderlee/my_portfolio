@@ -23,6 +23,7 @@ interface SidebarItem {
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
   { section: 'profile',        label: 'Perfil',          icon: <User size={18} /> },
+  { section: 'iam',            label: 'IAM',             icon: <Zap size={18} /> }, // Usaré un ícono diferente después o Zap está bien
   { section: 'experience',     label: 'Experiencia',     icon: <Briefcase size={18} /> },
   { section: 'projects',       label: 'Proyectos',       icon: <FolderKanban size={18} /> },
   { section: 'skills',         label: 'Habilidades',     icon: <Zap size={18} /> },

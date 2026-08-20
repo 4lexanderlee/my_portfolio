@@ -4,6 +4,7 @@ import type { AdminSection } from '../../types';
 
 // ── Lazy section imports ───────────────────────────────────────────────────
 import ProfileSection from './sections/ProfileSection';
+import IamSection from './sections/IamSection';
 import ExperienceSection from './sections/ExperienceSection';
 import ProjectsSection from './sections/ProjectsSection';
 import SkillsSection from './sections/SkillsSection';
@@ -16,6 +17,7 @@ const AdminDashboard: React.FC = () => {
   const renderSection = () => {
     switch (activeSection) {
       case 'profile':        return <ProfileSection />;
+      case 'iam':            return <IamSection />;
       case 'experience':     return <ExperienceSection />;
       case 'projects':       return <ProjectsSection />;
       case 'skills':         return <SkillsSection />;

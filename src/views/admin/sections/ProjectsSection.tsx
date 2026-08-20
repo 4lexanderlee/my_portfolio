@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Plus, Star, ExternalLink } from 'lucide-react';
 import { projectsService, skillsService } from '../../../services/api';
+import { uploadImage } from '../../../services/storage';
 import type { AdminProject, AdminProjectPayload, AdminSkill } from '../../../types';
 import DataTable, { type Column } from '../../../components/admin/DataTable';
 import SlideOver from '../../../components/admin/SlideOver';
@@ -87,6 +88,7 @@ const ProjectsSection: React.FC = () => {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isCurrent, setIsCurrent] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const {
     register,
@@ -113,6 +115,7 @@ const ProjectsSection: React.FC = () => {
     setIsFeatured(false);
     setIsCurrent(false);
     setSelectedSkillIds([]);
+    setImageFile(null);
     reset({
       title: '', subtitle: '', description: '', long_description: '',
       start_date: '', end_date: '', accent_color: '#c9a96e', icon: '🚀',
@@ -126,6 +129,7 @@ const ProjectsSection: React.FC = () => {
     setIsFeatured(row.is_featured);
     setIsCurrent(row.is_current);
     setSelectedSkillIds(row.skill_ids);
+    setImageFile(null);
     reset({
       title: row.title, subtitle: row.subtitle,
       description: row.description, long_description: row.long_description,
@@ -141,8 +145,14 @@ const ProjectsSection: React.FC = () => {
   const onSubmit = async (data: ProjectFormValues) => {
     setSaving(true);
     try {
+      let finalImageUrl = data.image_url;
+      if (imageFile) {
+        finalImageUrl = await uploadImage(imageFile, 'projects');
+      }
+
       const payload: AdminProjectPayload = {
         ...data,
+        image_url: finalImageUrl,
         is_featured: isFeatured,
         is_current: isCurrent,
         end_date: isCurrent ? null : data.end_date || null,
@@ -281,7 +291,21 @@ const ProjectsSection: React.FC = () => {
                 </div>
               </div>
             </div>
-            <InputField label="URL de Imagen Principal" id="proj-image-url" type="url" error={errors.image_url} registration={register('image_url')} placeholder="https://..." />
+            <div className="flex flex-col gap-1.5 mt-2">
+              <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>Imagen del Proyecto</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                className="input-dark text-sm w-full"
+                style={{ paddingTop: '8px' }}
+              />
+              {editTarget && editTarget.image_url && !imageFile && (
+                <span className="text-xs" style={{ color: 'var(--color-console-green)' }}>
+                  Imagen actual cargada. Sube una nueva para reemplazarla.
+                </span>
+              )}
+            </div>
             <InputField label="URL del Logo" id="proj-logo-url" type="url" error={errors.logo_url} registration={register('logo_url')} placeholder="https://..." />
           </div>
 

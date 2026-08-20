@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Terminal, Eye, EyeOff } from 'lucide-react';
-import { authService } from '../../services/api';
+import { supabase } from '../../lib/supabase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // Local login state for the inline form
   const [username, setUsername] = useState('');
@@ -25,9 +25,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
     setLoading(true);
     setError('');
+    
     try {
-      const { token, user } = await authService.login({ username, password });
-      login(token.access_token, user);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: username,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      // Supabase listener en AuthContext actualizará isAuthenticated
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error de autenticación.');
     } finally {

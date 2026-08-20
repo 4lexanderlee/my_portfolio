@@ -137,14 +137,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
             style={{ background: 'linear-gradient(135deg, #c9a96e, #e8b86d)', color: '#060810' }}
           >
-            {user?.username?.charAt(0).toUpperCase() ?? 'A'}
+            {(user?.user_metadata?.username || user?.email || 'A').charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-              {user?.username ?? 'admin'}
+              {user?.user_metadata?.username || user?.email?.split('@')[0] || 'admin'}
             </p>
             <p className="text-xs truncate" style={{ color: 'var(--color-text-dim)' }}>
-              {user?.role ?? 'Administrador'}
+              {user?.user_metadata?.role || 'Administrador'}
             </p>
           </div>
         </div>

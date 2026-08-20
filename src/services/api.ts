@@ -16,17 +16,19 @@ import type {
   AdminEducationPayload,
 } from '../types';
 
+import { supabase } from '../lib/supabase';
+
 // ── Base Config ───────────────────────────────────────────────────────────
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1';
-const TOKEN_KEY = 'admin_access_token';
 
 // ── HTTP Client ───────────────────────────────────────────────────────────
-// NOTE: _request is the future FastAPI client — currently mocked below.
+// Función envoltorio para fetch que inyecta el token de Supabase
 export async function _request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -101,33 +103,26 @@ export const authService = {
 // PUT    /profile/{id} → update profile
 // ─────────────────────────────────────────────────────────────────────────
 export const profileService = {
+  // ── Petición pública ──
+  async getProfile(): Promise<AdminProfile> {
+    return _request<AdminProfile>('/profile');
+  },
+
+  // ── Petición privada ──
+  async updateProfile(id: string, payload: AdminProfilePayload): Promise<AdminProfile> {
+    return _request<AdminProfile>(`/profile/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // (Mantenemos alias get y update para compatibilidad con el resto del código)
   async get(): Promise<AdminProfile> {
-    // ── MOCK ──────────────────────────────────────────────────────────
-    await delay();
-    return {
-      id: '1',
-      first_name: 'Alexander',
-      last_name: 'Lee',
-      email: 'melgarejorom@gmail.com',
-      description: 'Data Engineer & Full-Stack Developer apasionado por construir soluciones escalables.',
-      occupation: 'Data Engineer Intern',
-      cv_url: '#',
-      linkedin_url: 'https://www.linkedin.com/in/alexander-lee',
-      github_url: 'https://github.com/alexlee-dev',
-      is_open_to_work: true,
-      avatar_url: '',
-    };
-    // ── REAL ──────────────────────────────────────────────────────────
-    // return request<AdminProfile>('/profile');
+    return this.getProfile();
   },
 
   async update(id: string, payload: AdminProfilePayload): Promise<AdminProfile> {
-    await delay();
-    return { id, ...payload };
-    // return request<AdminProfile>(`/profile/${id}`, {
-    //   method: 'PUT',
-    //   body: JSON.stringify(payload),
-    // });
+    return this.updateProfile(id, payload);
   },
 };
 

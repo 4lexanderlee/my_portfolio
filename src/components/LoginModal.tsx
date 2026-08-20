@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Eye, EyeOff, Terminal } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { authService } from '../services/api';
+import { X, Lock, Eye, EyeOff, Mail } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface LoginModalProps {
   onClose: () => void;
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
-  const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,15 +44,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!email || !password) {
       setError('Completa todos los campos.');
       return;
     }
     setLoading(true);
     setError('');
+    
     try {
-      const { token, user } = await authService.login({ username, password });
-      login(token.access_token, user);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+      
       onClose();
       window.location.hash = 'admin';
     } catch (err: unknown) {
@@ -145,21 +151,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label
-              htmlFor="login-username"
+              htmlFor="login-email"
               className="text-xs font-semibold tracking-wider uppercase"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              <Terminal size={10} className="inline mr-1" />
-              Usuario
+              <Mail size={10} className="inline mr-1" />
+              Email
             </label>
             <input
-              id="login-username"
-              type="text"
+              id="login-email"
+              type="email"
               className="input-dark"
-              placeholder="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
+              placeholder="admin@portfolio.dev"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </div>
 

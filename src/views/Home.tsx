@@ -4,11 +4,12 @@ import SectionTitle from '../components/ui/SectionTitle';
 import TechBadge from '../components/ui/TechBadge';
 import {
   EXPERIENCES,
-  SKILL_GROUPS,
   PROJECTS,
   CERTIFICATIONS,
   EDUCATION,
 } from '../data/portfolioData';
+import { skillsService, certificationsService } from '../services/api';
+import type { AdminSkill, SkillGroup, AdminCertification } from '../types';
 import { Award, GraduationCap, ChevronLeft, ChevronRight, ArrowRight, Building2, MapPin, CalendarDays } from 'lucide-react';
 import type { View } from '../types';
 
@@ -18,6 +19,47 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const skillScrollRef = useRef<HTMLDivElement>(null);
+  const [skillGroups, setSkillGroups] = React.useState<SkillGroup[]>([]);
+  const [certifications, setCertifications] = React.useState<AdminCertification[]>([]);
+
+  React.useEffect(() => {
+    skillsService.list().then((data: AdminSkill[]) => {
+      const CATEGORY_LABELS: Record<string, string> = {
+        language: 'Lenguaje de Programación',
+        framework: 'Framework / Librería',
+        database: 'Base de Datos',
+        cloud_devops: 'Cloud & DevOps',
+        visualization: 'Visualización',
+        soft_skill: 'Soft Skills',
+        hard_skill: 'Hard Skills',
+        other: 'Otro'
+      };
+
+      const grouped = data.reduce((acc, skill) => {
+        const label = CATEGORY_LABELS[skill.category] || skill.category;
+        if (!acc[label]) {
+          acc[label] = [];
+        }
+        acc[label].push(skill.skill_name);
+        return acc;
+      }, {} as Record<string, string[]>);
+      
+      const groups: SkillGroup[] = Object.entries(grouped).map(([label, skills]) => ({
+        label,
+        skills,
+      }));
+      setSkillGroups(groups);
+    }).catch(console.error);
+
+    certificationsService.list().then((data) => {
+      const sorted = [...data].sort((a, b) => {
+        if (!a.date_issue) return 1;
+        if (!b.date_issue) return -1;
+        return a.date_issue.localeCompare(b.date_issue);
+      });
+      setCertifications(sorted);
+    }).catch(console.error);
+  }, []);
 
   const scrollSkills = (dir: 'left' | 'right') => {
     if (skillScrollRef.current) {
@@ -134,7 +176,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           className="flex gap-4 overflow-x-auto pb-3 hide-scrollbar"
           style={{ scrollSnapType: 'x mandatory' }}
         >
-          {SKILL_GROUPS.map((group) => (
+          {skillGroups.map((group) => (
             <GlassCard
               key={group.label}
               className="p-5 flex-shrink-0"
@@ -238,45 +280,63 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         </div>
       </section>
 
+
       {/* ══════════════ CERTIFICACIONES ══════════════ */}
       <section className="flex flex-col gap-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
         <SectionTitle label="// 04 — Certificaciones" title="Certificaciones & Logros" />
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CERTIFICATIONS.map((cert, i) => (
-            <GlassCard key={i} hover className="p-5 flex gap-4 items-start">
+          {certifications.length > 0 ? certifications.map((cert) => (
+            <GlassCard 
+              key={cert.id} 
+              hover 
+              className="p-5 flex gap-4 items-start cursor-pointer"
+              onClick={() => {
+                if (cert.reference_link) {
+                  window.open(cert.reference_link, '_blank', 'noopener,noreferrer');
+                }
+              }}
+            >
               <div
-                className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xl"
+                className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xl overflow-hidden"
                 style={{
                   background: 'rgba(201,169,110,0.08)',
                   border: '1px solid rgba(201,169,110,0.15)',
                 }}
               >
-                {cert.icon}
+                {cert.icon_url?.startsWith('http') ? (
+                  <img src={cert.icon_url} alt={cert.title} className="w-full h-full object-cover" />
+                ) : (
+                  cert.icon_url || '📜'
+                )}
               </div>
               <div>
                 <Award size={11} className="mb-1" style={{ color: 'var(--color-accent-gold)' }} />
                 <h4
-                  className="text-sm font-semibold leading-tight"
+                  className="text-sm font-semibold leading-tight hover:underline"
                   style={{ color: 'var(--color-text-primary)' }}
                 >
-                  {cert.name}
+                  {cert.title}
                 </h4>
                 <p
                   className="text-xs mt-1"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  {cert.issuer}
+                  {cert.awarded_by}
                 </p>
                 <p
                   className="text-xs mt-1.5 font-mono"
                   style={{ color: 'var(--color-text-dim)' }}
                 >
-                  {cert.dateLabel}
+                  {cert.date_issue ? (() => {
+                    const [year, month] = cert.date_issue.split('-');
+                    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                    return `${months[parseInt(month, 10) - 1]} ${year}`;
+                  })() : 'Presente'}
                 </p>
               </div>
             </GlassCard>
-          ))}
+          )) : <p className="text-sm text-gray-500">Cargando certificaciones...</p>}
         </div>
       </section>
 

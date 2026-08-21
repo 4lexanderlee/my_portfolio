@@ -53,8 +53,9 @@ class IamBase(BaseModel):
     profile_id: UUID
 
 
-class IamCreate(IamBase):
-    pass
+class IamCreate(BaseModel):
+    occupation_name: str
+    profile_id: Optional[UUID] = None
 
 
 class IamUpdate(BaseModel):
@@ -190,8 +191,10 @@ class SkillBase(BaseModel):
     profile_id: UUID
 
 
-class SkillCreate(SkillBase):
-    pass
+class SkillCreate(BaseModel):
+    category: str
+    skill_name: str
+    profile_id: Optional[UUID] = None
 
 
 class SkillUpdate(BaseModel):
@@ -223,8 +226,13 @@ class CertificationBase(BaseModel):
         return _parse_month_date(v)
 
 
-class CertificationCreate(CertificationBase):
-    pass
+class CertificationCreate(BaseModel):
+    title: str
+    awarded_by: str
+    date_issue: Optional[date] = None
+    icon_url: Optional[str] = None
+    reference_link: str
+    profile_id: Optional[UUID] = None
 
 
 class CertificationUpdate(BaseModel):

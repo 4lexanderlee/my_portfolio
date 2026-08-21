@@ -12,6 +12,14 @@ router = APIRouter(
 )
 
 
+def _get_profile_id(supabase) -> str:
+    """Obtiene el profile_id del único registro de la tabla profile."""
+    resp = supabase.table("profile").select("profile_id").limit(1).execute()
+    if not resp.data:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado para asociar")
+    return resp.data[0]["profile_id"]
+
+
 @router.get("/", response_model=list[IamResponse])
 def get_iam():
     """Ruta pública — lista todas las ocupaciones."""
@@ -26,12 +34,19 @@ def create_iam(
     creds: HTTPAuthorizationCredentials = Depends(security),
 ):
     supabase = get_supabase()
-    supabase.auth.set_session(creds.credentials, "")
+
+    # Auto-inyectar profile_id desde la BD (el frontend no lo envía)
+    payload = data.model_dump(mode="json")
+    if not payload.get("profile_id"):
+        payload["profile_id"] = _get_profile_id(supabase)
+
     try:
-        resp = supabase.table("iam").insert(data.model_dump(mode="json")).execute()
+        resp = supabase.table("iam").insert(payload).execute()
         if not resp.data:
             raise HTTPException(status_code=400, detail="No se pudo crear la ocupación")
         return resp.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error creando ocupación: {str(e)}")
 
@@ -43,7 +58,6 @@ def update_iam(
     creds: HTTPAuthorizationCredentials = Depends(security),
 ):
     supabase = get_supabase()
-    supabase.auth.set_session(creds.credentials, "")
     update_data = data.model_dump(exclude_unset=True, mode="json")
     if not update_data:
         raise HTTPException(status_code=400, detail="Sin datos para actualizar")
@@ -57,6 +71,8 @@ def update_iam(
         if not resp.data:
             raise HTTPException(status_code=404, detail="Ocupación no encontrada")
         return resp.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error actualizando ocupación: {str(e)}")
 
@@ -67,11 +83,12 @@ def delete_iam(
     creds: HTTPAuthorizationCredentials = Depends(security),
 ):
     supabase = get_supabase()
-    supabase.auth.set_session(creds.credentials, "")
     try:
         resp = supabase.table("iam").delete().eq("iam_id", str(iam_id)).execute()
         if not resp.data:
             raise HTTPException(status_code=404, detail="Ocupación no encontrada")
         return {"message": "Ocupación eliminada correctamente"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error eliminando ocupación: {str(e)}")

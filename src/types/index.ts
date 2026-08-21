@@ -119,21 +119,21 @@ export interface AuthUser {
 
 // ── Admin: Profile ────────────────────────────────────────────────────────
 export interface AdminProfile {
-  id: string;
-  first_name: string;
+  profile_id: string;       // UUID del registro en Supabase
+  name: string;             // maps to ProfileBase.name
   last_name: string;
   email: string;
   description: string;
-  cv_url: string;
-  linkedin_url: string;
-  github_url: string;
-  is_open_to_work: boolean;
-  avatar_url?: string;
+  cv_url: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  employment_status: boolean; // true = open to work
   created_at?: string;
   updated_at?: string;
 }
 
-export type AdminProfilePayload = Omit<AdminProfile, 'id' | 'created_at' | 'updated_at'>;
+/** Payload para el PUT — excluye los campos inmutables del servidor */
+export type AdminProfilePayload = Omit<AdminProfile, 'profile_id' | 'created_at' | 'updated_at'>;
 
 // ── Admin: Experience ─────────────────────────────────────────────────────
 export interface AdminResponsibility {
@@ -173,7 +173,7 @@ export type SkillCategory =
 
 export interface AdminSkill {
   id: string;
-  name: string;
+  skill_name: string;
   category: SkillCategory;
   icon_url?: string;
   created_at?: string;
@@ -210,11 +210,11 @@ export type AdminProjectPayload = Omit<AdminProject, 'id' | 'created_at' | 'upda
 // ── Admin: Certifications ─────────────────────────────────────────────────
 export interface AdminCertification {
   id: string;
-  name: string;
-  issuer: string;
-  issued_date: string;  // ISO: "2022-06"
-  credential_url: string;  // requerido
-  icon?: string;
+  title: string;
+  awarded_by: string;
+  date_issue: string | null;  // ISO: "2022-06-01" or similar
+  reference_link: string;  // requerido
+  icon_url?: string;
   created_at?: string;
 }
 

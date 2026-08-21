@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import GlassCard from '../components/ui/GlassCard';
-import { CONTACT_EMAIL, CONTACT_SUBJECT, CONTACT_LINKS } from '../data/portfolioData';
+import { getPublicProfile } from '../services/api';
+import type { AdminProfile } from '../types';
 import { Send, ExternalLink, Mail } from 'lucide-react';
-import type { ContactIconId } from '../types';
+import type { ContactIconId, ContactLink } from '../types';
 
 // ── Inline brand SVGs ──
 const GitHubSVG: React.FC<{ size?: number; color?: string }> = ({ size = 18, color = 'currentColor' }) => (
@@ -24,16 +25,61 @@ const CONTACT_ICON_MAP: Record<ContactIconId, { render: (size: number, color: st
   github:   { render: (s, c) => <GitHubSVG size={s} color={c} />,             color: '#e6edf3', bg: 'rgba(230,237,243,0.07)' },
 };
 
+/** Construye los links de contacto dinámicamente desde el perfil de la BD */
+function buildContactLinks(profile: AdminProfile): ContactLink[] {
+  const CONTACT_SUBJECT = 'Estoy en busca de contactarte';
+  const links: ContactLink[] = [];
+
+  links.push({
+    label: 'Email',
+    value: profile.email,
+    href: `mailto:${profile.email}?subject=${encodeURIComponent(CONTACT_SUBJECT)}`,
+    icon: 'mail',
+  });
+
+  if (profile.linkedin_url) {
+    const displayValue = profile.linkedin_url.replace(/https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '');
+    links.push({
+      label: 'LinkedIn',
+      value: displayValue || 'Alexander Lee',
+      href: profile.linkedin_url,
+      icon: 'linkedin',
+    });
+  }
+
+  if (profile.github_url) {
+    const displayValue = profile.github_url.replace(/https?:\/\/(www\.)?github\.com\//, '@').replace(/\/$/, '');
+    links.push({
+      label: 'GitHub',
+      value: displayValue || '@alexlee-dev',
+      href: profile.github_url,
+      icon: 'github',
+    });
+  }
+
+  return links;
+}
+
 const Contact: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
+
+  // ── Carga el perfil real desde la API para los links de contacto ──────
+  useEffect(() => {
+    getPublicProfile().then(setProfile).catch(console.error);
+  }, []);
+
+  const contactLinks = profile ? buildContactLinks(profile) : [];
+  const contactEmail = profile?.email ?? '';
+  const CONTACT_SUBJECT = 'Estoy en busca de contactarte';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const body = `Hola Alexander,\n\nMi nombre es ${name} (${email}).\n\n${message}`;
-    const mailtoLink = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(CONTACT_SUBJECT)}&body=${encodeURIComponent(body)}`;
+    const mailtoLink = `mailto:${contactEmail}?subject=${encodeURIComponent(CONTACT_SUBJECT)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoLink;
     setSent(true);
     setTimeout(() => setSent(false), 5000);
@@ -116,51 +162,62 @@ const Contact: React.FC = () => {
               </p>
             </GlassCard>
 
-            {/* Contact links */}
-            {CONTACT_LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target={link.href.startsWith('mailto') ? undefined : '_blank'}
-                rel="noopener noreferrer"
-                id={`contact-link-${link.label.toLowerCase()}`}
-                className="block"
-              >
-                <GlassCard hover className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{
-                          background: CONTACT_ICON_MAP[link.icon].bg,
-                          border: `1px solid ${CONTACT_ICON_MAP[link.icon].color}30`,
-                        }}
-                      >
-                        {CONTACT_ICON_MAP[link.icon].render(18, CONTACT_ICON_MAP[link.icon].color)}
-                      </div>
-                      <div>
-                        <p
-                          className="text-xs font-semibold uppercase tracking-wider"
-                          style={{ color: 'var(--color-text-dim)' }}
+            {/* Contact links — dinámicos desde la BD */}
+            {contactLinks.length > 0 ? (
+              contactLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target={link.href.startsWith('mailto') ? undefined : '_blank'}
+                  rel="noopener noreferrer"
+                  id={`contact-link-${link.label.toLowerCase()}`}
+                  className="block"
+                >
+                  <GlassCard hover className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{
+                            background: CONTACT_ICON_MAP[link.icon].bg,
+                            border: `1px solid ${CONTACT_ICON_MAP[link.icon].color}30`,
+                          }}
                         >
-                          {link.label}
-                        </p>
-                        <p
-                          className="text-sm mt-0.5"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {link.value}
-                        </p>
+                          {CONTACT_ICON_MAP[link.icon].render(18, CONTACT_ICON_MAP[link.icon].color)}
+                        </div>
+                        <div>
+                          <p
+                            className="text-xs font-semibold uppercase tracking-wider"
+                            style={{ color: 'var(--color-text-dim)' }}
+                          >
+                            {link.label}
+                          </p>
+                          <p
+                            className="text-sm mt-0.5"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {link.value}
+                          </p>
+                        </div>
                       </div>
+                      <ExternalLink
+                        size={14}
+                        style={{ color: 'var(--color-text-dim)', flexShrink: 0 }}
+                      />
                     </div>
-                    <ExternalLink
-                      size={14}
-                      style={{ color: 'var(--color-text-dim)', flexShrink: 0 }}
-                    />
-                  </div>
-                </GlassCard>
-              </a>
-            ))}
+                  </GlassCard>
+                </a>
+              ))
+            ) : (
+              /* Skeleton mientras carga el perfil */
+              [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl p-4 animate-pulse"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', height: '72px' }}
+                />
+              ))
+            )}
           </div>
 
           {/* ── Right: Form ── */}
@@ -256,6 +313,7 @@ const Contact: React.FC = () => {
                   type="submit"
                   className="btn-primary flex items-center justify-center gap-2 w-full mt-2 py-3"
                   style={{ fontSize: '0.9rem' }}
+                  disabled={!contactEmail}
                 >
                   <Send size={15} />
                   Enviar Mensaje

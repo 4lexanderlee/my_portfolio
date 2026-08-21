@@ -15,6 +15,7 @@ interface TimelineEvent {
   description: string;
   category: TimelineCategory;
   icon: string;
+  link?: string;
 }
 
 type FilterType = 'all' | TimelineCategory;
@@ -106,13 +107,14 @@ const Timeline: React.FC = () => {
         certifications.forEach((cert) => {
           timelineEvents.push({
             id: `cert-${cert.id}`,
-            date: cert.issued_date ?? '2022-01',
-            dateLabel: formatMonthLabel(cert.issued_date),
-            title: cert.name,
-            subtitle: cert.issuer,
-            description: cert.credential_url ? `Ver credencial: ${cert.credential_url}` : '',
+            date: cert.date_issue ?? '2022-01',
+            dateLabel: formatMonthLabel(cert.date_issue),
+            title: cert.title,
+            subtitle: cert.awarded_by,
+            description: '',
             category: 'certification',
-            icon: cert.icon ?? '📜',
+            icon: cert.icon_url ?? '📜',
+            link: cert.reference_link,
           });
         });
 
@@ -268,11 +270,16 @@ const Timeline: React.FC = () => {
               >
                 {/* Mobile */}
                 <div className="md:hidden flex items-start gap-4 pl-0 w-full">
-                  <div className="timeline-node flex-shrink-0 mt-1 z-10"
+                  <div className="timeline-node flex-shrink-0 mt-1 z-10 overflow-hidden"
                     style={{ borderColor: color, background: bg, color, width: '40px', height: '40px', fontSize: '1.1rem' }}>
-                    {event.icon}
+                    {event.icon?.startsWith('http') ? <img src={event.icon} alt={event.title} className="w-full h-full object-cover" /> : event.icon}
                   </div>
-                  <GlassCard className="p-4 flex-1" style={{ borderLeft: `3px solid ${color}` } as React.CSSProperties}>
+                  <GlassCard 
+                    className={`p-4 flex-1 ${event.link ? 'cursor-pointer' : ''}`} 
+                    style={{ borderLeft: `3px solid ${color}` } as React.CSSProperties}
+                    hover={!!event.link}
+                    onClick={() => event.link && window.open(event.link, '_blank', 'noopener,noreferrer')}
+                  >
                     <CardContent />
                   </GlassCard>
                 </div>
@@ -281,25 +288,35 @@ const Timeline: React.FC = () => {
                 {isRight ? (
                   <>
                     <div className="hidden md:flex justify-end pr-8">
-                      <GlassCard className="p-5 w-full max-w-xs" style={{ borderRight: `2px solid ${color}` } as React.CSSProperties}>
+                      <GlassCard 
+                        className={`p-5 w-full max-w-xs ${event.link ? 'cursor-pointer' : ''}`} 
+                        style={{ borderRight: `2px solid ${color}` } as React.CSSProperties}
+                        hover={!!event.link}
+                        onClick={() => event.link && window.open(event.link, '_blank', 'noopener,noreferrer')}
+                      >
                         <CardContent />
                       </GlassCard>
                     </div>
                     <div className="hidden md:flex items-start pl-8">
-                      <div className="timeline-node" style={{ borderColor: color, background: bg, color, fontSize: '1.1rem', flexShrink: 0 }}>
-                        {event.icon}
+                      <div className="timeline-node overflow-hidden" style={{ borderColor: color, background: bg, color, fontSize: '1.1rem', flexShrink: 0 }}>
+                        {event.icon?.startsWith('http') ? <img src={event.icon} alt={event.title} className="w-full h-full object-cover" /> : event.icon}
                       </div>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="hidden md:flex items-start justify-end pr-8">
-                      <div className="timeline-node" style={{ borderColor: color, background: bg, color, fontSize: '1.1rem', flexShrink: 0 }}>
-                        {event.icon}
+                      <div className="timeline-node overflow-hidden" style={{ borderColor: color, background: bg, color, fontSize: '1.1rem', flexShrink: 0 }}>
+                        {event.icon?.startsWith('http') ? <img src={event.icon} alt={event.title} className="w-full h-full object-cover" /> : event.icon}
                       </div>
                     </div>
                     <div className="hidden md:flex justify-start pl-8">
-                      <GlassCard className="p-5 w-full max-w-xs" style={{ borderLeft: `2px solid ${color}` } as React.CSSProperties}>
+                      <GlassCard 
+                        className={`p-5 w-full max-w-xs ${event.link ? 'cursor-pointer' : ''}`} 
+                        style={{ borderLeft: `2px solid ${color}` } as React.CSSProperties}
+                        hover={!!event.link}
+                        onClick={() => event.link && window.open(event.link, '_blank', 'noopener,noreferrer')}
+                      >
                         <CardContent />
                       </GlassCard>
                     </div>

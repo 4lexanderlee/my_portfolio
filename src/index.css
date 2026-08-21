@@ -56,7 +56,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: -2;
-  background-image: url('../public/alexandelee_profile.png');
+  background-image: url('/alexandelee_profile.png');
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;

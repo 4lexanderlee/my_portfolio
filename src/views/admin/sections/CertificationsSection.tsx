@@ -55,8 +55,9 @@ const CertificationsSection: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconError, setIconError] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<Omit<AdminCertificationPayload, 'icon'>>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<Omit<AdminCertificationPayload, 'icon_url'>>();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -69,27 +70,50 @@ const CertificationsSection: React.FC = () => {
   const openCreate = () => {
     setEditTarget(null);
     setIconFile(null);
-    reset({ name: '', issuer: '', issued_date: '', credential_url: '' });
+    setIconError(null);
+    reset({ title: '', awarded_by: '', date_issue: '', reference_link: '' });
     setSlideOpen(true);
   };
 
   const openEdit = (row: AdminCertification) => {
     setEditTarget(row);
     setIconFile(null);
-    reset({ name: row.name, issuer: row.issuer, issued_date: row.issued_date, credential_url: row.credential_url ?? '' });
+    setIconError(null);
+    reset({ title: row.title, awarded_by: row.awarded_by, date_issue: row.date_issue ?? '', reference_link: row.reference_link ?? '' });
     setSlideOpen(true);
   };
 
-  const onSubmit = async (data: Omit<AdminCertificationPayload, 'icon'>) => {
+  const validateImageSize = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        resolve(img.width === 600 && img.height === 600);
+      };
+      img.onerror = () => resolve(false);
+    });
+  };
+
+  const onSubmit = async (data: Omit<AdminCertificationPayload, 'icon_url'>) => {
+    setIconError(null);
+    
+    if (iconFile) {
+      const isValidSize = await validateImageSize(iconFile);
+      if (!isValidSize) {
+        setIconError('La imagen debe ser de exactamente 600x600 píxeles.');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       // Subir icono PNG al bucket si se seleccionó uno
-      let iconUrl = editTarget?.icon ?? '';
+      let newIconUrl = editTarget?.icon_url ?? '';
       if (iconFile) {
-        iconUrl = await uploadFile(iconFile, 'cert-icons');
+        newIconUrl = await uploadFile(iconFile, 'cert-icons');
       }
 
-      const payload: AdminCertificationPayload = { ...data, icon: iconUrl };
+      const payload: AdminCertificationPayload = { ...data, icon_url: newIconUrl };
 
       if (editTarget) {
         const updated = await certificationsService.update(editTarget.id, payload);
@@ -119,27 +143,27 @@ const CertificationsSection: React.FC = () => {
 
   const columns: Column<AdminCertification>[] = [
     {
-      key: 'name', header: 'Certificación',
+      key: 'title', header: 'Certificación',
       render: (row) => (
         <div className="flex items-center gap-2">
-          {isIconUrl(row.icon) ? (
-            <img src={row.icon} alt={row.name} className="w-7 h-7 object-contain rounded-lg flex-shrink-0" />
+          {isIconUrl(row.icon_url) ? (
+            <img src={row.icon_url} alt={row.title} className="w-4 h-4 object-contain flex-shrink-0" />
           ) : (
-            <span className="text-xl">{row.icon || '📜'}</span>
+            <span className="text-sm">{row.icon_url || '📜'}</span>
           )}
-          <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{row.name}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{row.title}</span>
         </div>
       ),
     },
-    { key: 'issuer', header: 'Institución Emisora' },
+    { key: 'awarded_by', header: 'Institución Emisora' },
     {
-      key: 'issued_date', header: 'Fecha', width: '120px',
-      render: (row) => <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>{row.issued_date}</span>,
+      key: 'date_issue', header: 'Fecha', width: '120px',
+      render: (row) => <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>{row.date_issue}</span>,
     },
     {
-      key: 'credential_url', header: 'Credencial', width: '90px',
-      render: (row) => row.credential_url
-        ? <a href={row.credential_url} target="_blank" rel="noreferrer" style={{ color: 'var(--color-accent-gold)' }}><ExternalLink size={13} /></a>
+      key: 'reference_link', header: 'Credencial', width: '90px',
+      render: (row) => row.reference_link
+        ? <a href={row.reference_link} target="_blank" rel="noreferrer" style={{ color: 'var(--color-accent-gold)' }}><ExternalLink size={13} /></a>
         : <span style={{ color: 'var(--color-text-dim)' }}>—</span>,
     },
   ];
@@ -160,18 +184,21 @@ const CertificationsSection: React.FC = () => {
 
       <SlideOver isOpen={slideOpen} onClose={() => setSlideOpen(false)} title={editTarget ? 'Editar Certificación' : 'Nueva Certificación'}>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-          <InputField label="Nombre de la Certificación" id="cert-name" required error={errors.name} registration={register('name', { required: 'Campo requerido' })} placeholder="Python Essentials 1 & 2" />
-          <InputField label="Institución Emisora" id="cert-issuer" required error={errors.issuer} registration={register('issuer', { required: 'Campo requerido' })} placeholder="Cisco Networking Academy" />
-          <InputField label="Fecha de Emisión" id="cert-issued" type="date" required error={errors.issued_date} registration={register('issued_date', { required: 'Campo requerido' })} />
-          <InputField label="URL de la Credencial" id="cert-url" type="url" required error={errors.credential_url} registration={register('credential_url', { required: 'El enlace de credencial es requerido' })} placeholder="https://..." />
-          <FilePicker
-            label="Ícono / Logo (PNG)"
-            accept="image/png,image/webp,image/svg+xml"
-            file={iconFile}
-            currentUrl={isIconUrl(editTarget?.icon) ? editTarget?.icon : undefined}
-            onChange={setIconFile}
-            hint="Imagen PNG del logo o insignia de la certificación"
-          />
+          <InputField label="Nombre de la Certificación" id="cert-title" required error={errors.title} registration={register('title', { required: 'Campo requerido' })} placeholder="Python Essentials 1 & 2" />
+          <InputField label="Institución Emisora" id="cert-awarded_by" required error={errors.awarded_by} registration={register('awarded_by', { required: 'Campo requerido' })} placeholder="Cisco Networking Academy" />
+          <InputField label="Fecha de Emisión" id="cert-date_issue" type="date" required error={errors.date_issue} registration={register('date_issue', { required: 'Campo requerido' })} />
+          <InputField label="URL de la Credencial" id="cert-reference_link" type="url" required error={errors.reference_link} registration={register('reference_link', { required: 'El enlace de credencial es requerido' })} placeholder="https://..." />
+          <div>
+            <FilePicker
+              label="Ícono / Logo (PNG) 600x600"
+              accept="image/png"
+              file={iconFile}
+              currentUrl={isIconUrl(editTarget?.icon_url) ? editTarget?.icon_url : undefined}
+              onChange={setIconFile}
+              hint="Imagen PNG obligatoria de 600x600px del logo de la certificación."
+            />
+            {iconError && <p className="text-xs text-red-400 mt-1">{iconError}</p>}
+          </div>
           <div className="flex gap-3 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={() => setSlideOpen(false)} className="btn-ghost flex-1">Cancelar</button>
             <button id="btn-cert-save" type="submit" className="btn-primary flex-1 flex items-center justify-center gap-2" disabled={saving}>
@@ -182,7 +209,7 @@ const CertificationsSection: React.FC = () => {
         </form>
       </SlideOver>
 
-      <ConfirmDialog isOpen={!!deleteTarget} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} title="¿Eliminar certificación?" message={`Se eliminará "${deleteTarget?.name}" emitida por ${deleteTarget?.issuer}.`} loading={deleting} />
+      <ConfirmDialog isOpen={!!deleteTarget} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} title="¿Eliminar certificación?" message={`Se eliminará "${deleteTarget?.title}" emitida por ${deleteTarget?.awarded_by}.`} loading={deleting} />
     </>
   );
 };

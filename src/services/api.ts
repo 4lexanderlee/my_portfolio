@@ -45,12 +45,30 @@ export async function _request<T>(
   return res.json() as Promise<T>;
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// PROFILE SERVICE
-// ─────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+const API_BASE_PUBLIC = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+
+/**
+ * Obtiene el perfil públicamente (sin token) — para Hero y Contact.
+ * El router devuelve list[ProfileResponse]; tomamos el primer elemento.
+ */
+export async function getPublicProfile(): Promise<AdminProfile> {
+  const res = await fetch(`${API_BASE_PUBLIC}/profile/`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const list: AdminProfile[] = await res.json();
+  if (!list || list.length === 0) throw new Error('Perfil no encontrado');
+  return list[0];
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// PROFILE SERVICE (autenticado — para el panel de admin)
+// ───────────────────────────────────────────────────────────────────────────
 export const profileService = {
+  /** GET autenticado: devuelve el primer (y único) perfil de la tabla. */
   async get(): Promise<AdminProfile> {
-    return _request<AdminProfile>('/profile');
+    const list = await _request<AdminProfile[]>('/profile/');
+    if (!list || list.length === 0) throw new Error('Perfil no encontrado');
+    return list[0];
   },
   async update(id: string, payload: AdminProfilePayload): Promise<AdminProfile> {
     return _request<AdminProfile>(`/profile/${id}`, {

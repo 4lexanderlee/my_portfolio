@@ -51,13 +51,13 @@ const SkillsSection: React.FC = () => {
 
   const openCreate = () => {
     setEditTarget(null);
-    reset({ name: '', category: 'language' });
+    reset({ skill_name: '', category: 'language' });
     setSlideOpen(true);
   };
 
   const openEdit = (row: AdminSkill) => {
     setEditTarget(row);
-    reset({ name: row.name, category: row.category });
+    reset({ skill_name: row.skill_name, category: row.category });
     setSlideOpen(true);
   };
 
@@ -86,7 +86,7 @@ const SkillsSection: React.FC = () => {
   };
 
   const columns: Column<AdminSkill>[] = [
-    { key: 'name', header: 'Habilidad' },
+    { key: 'skill_name', header: 'Habilidad' },
     {
       key: 'category', header: 'Categoría',
       render: (row) => {
@@ -103,7 +103,7 @@ const SkillsSection: React.FC = () => {
     {
       key: 'icon_url', header: 'Ícono', width: '70px',
       render: (row) => row.icon_url
-        ? <img src={row.icon_url} alt={row.name} className="w-6 h-6 object-contain" />
+        ? <img src={row.icon_url} alt={row.skill_name} className="w-6 h-6 object-contain" />
         : <span style={{ color: 'var(--color-text-dim)' }}>—</span>,
     },
   ];
@@ -124,7 +124,7 @@ const SkillsSection: React.FC = () => {
 
       <SlideOver isOpen={slideOpen} onClose={() => setSlideOpen(false)} title={editTarget ? 'Editar Habilidad' : 'Nueva Habilidad'}>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-          <InputField label="Nombre" id="skill-name" required error={errors.name} registration={register('name', { required: 'Campo requerido' })} placeholder="Python" />
+          <InputField label="Nombre" id="skill-skill_name" required error={errors.skill_name} registration={register('skill_name', { required: 'Campo requerido' })} placeholder="Python" />
           <SelectField label="Categoría" id="skill-category" required error={errors.category} registration={register('category', { required: 'Campo requerido' })} options={CATEGORY_OPTIONS} />
           <div className="flex gap-3 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={() => setSlideOpen(false)} className="btn-ghost flex-1">Cancelar</button>
@@ -136,7 +136,7 @@ const SkillsSection: React.FC = () => {
         </form>
       </SlideOver>
 
-      <ConfirmDialog isOpen={!!deleteTarget} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} title="¿Eliminar habilidad?" message={`Se eliminará "${deleteTarget?.name}" de todas las asociaciones con proyectos.`} loading={deleting} />
+      <ConfirmDialog isOpen={!!deleteTarget} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} title="¿Eliminar habilidad?" message={`Se eliminará "${deleteTarget?.skill_name}" de todas las asociaciones con proyectos.`} loading={deleting} />
     </>
   );
 };

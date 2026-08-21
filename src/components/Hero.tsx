@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown, Download } from 'lucide-react';
 import type { View } from '../types';
-import { iamService } from '../services/api';
+import type { AdminProfile } from '../types';
+import { iamService, getPublicProfile } from '../services/api';
 
 // ── Inline brand SVGs (lucide-react no incluye iconos de redes sociales) ──
 const GitHubIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
@@ -20,28 +21,32 @@ interface HeroProps {
   onNavigate: (view: View) => void;
 }
 
-
-
 const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const [roles, setRoles] = useState<string[]>(['Desarrollador de Software']);
   const [roleIndex, setRoleIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [typing, setTyping] = useState(true);
   const [charIndex, setCharIndex] = useState(0);
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
 
+  // ── Carga el perfil público y los roles IAM en paralelo ────────────────
   useEffect(() => {
+    // Cargar roles del typewriter
     iamService.list().then((data) => {
       if (data && data.length > 0) {
         setRoles(data.map(d => d.occupation_name));
       }
     }).catch(console.error);
+
+    // Cargar perfil para URLs dinámicas
+    getPublicProfile().then(setProfile).catch(console.error);
   }, []);
 
-  // Typewriter effect
+  // ── Typewriter effect ──────────────────────────────────────────────────
   useEffect(() => {
     if (!roles || roles.length === 0) return;
     const currentRole = roles[roleIndex] || roles[0];
-    
+
     if (typing) {
       if (charIndex < currentRole.length) {
         const timeout = setTimeout(() => {
@@ -66,6 +71,11 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       }
     }
   }, [charIndex, typing, roleIndex, roles]);
+
+  // URLs dinámicas con fallbacks seguros
+  const githubUrl = profile?.github_url || '#';
+  const linkedinUrl = profile?.linkedin_url || '#';
+  const cvUrl = profile?.cv_url || null;
 
   return (
     <section
@@ -101,23 +111,21 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 display: 'block',
               }}
             />
-            {/* Top gradient: blends photo with navbar/top of page */}
+            {/* Top gradient */}
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
-                background:
-                  'linear-gradient(to bottom, rgba(6,8,16,0.85) 0%, transparent 20%)',
+                background: 'linear-gradient(to bottom, rgba(6,8,16,0.85) 0%, transparent 20%)',
                 pointerEvents: 'none',
               }}
             />
-            {/* Right edge gradient: blends photo into content side */}
+            {/* Right edge gradient */}
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
-                background:
-                  'linear-gradient(to right, transparent 40%, rgba(6,8,16,0.9) 100%)',
+                background: 'linear-gradient(to right, transparent 40%, rgba(6,8,16,0.9) 100%)',
                 pointerEvents: 'none',
               }}
             />
@@ -126,15 +134,14 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background:
-                  'linear-gradient(to top, rgba(6,8,16,0.5) 0%, transparent 20%)',
+                background: 'linear-gradient(to top, rgba(6,8,16,0.5) 0%, transparent 20%)',
                 pointerEvents: 'none',
               }}
             />
           </div>
         </div>
 
-        {/* ══════════════ RIGHT: Text Content (NO glass) ══════════════ */}
+        {/* ══════════════ RIGHT: Text Content ══════════════ */}
         <div
           className="flex-1 flex flex-col justify-center animate-fade-in-right"
           style={{
@@ -144,31 +151,61 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             minHeight: 'calc(100vh - 64px)',
           }}
         >
-          {/* Available badge */}
-          <div
-            className="flex items-center gap-3 w-fit mb-6"
-            style={{
-              background: 'rgba(201,169,110,0.08)',
-              border: '1px solid rgba(201,169,110,0.22)',
-              borderRadius: '99px',
-              padding: '6px 18px',
-            }}
-          >
-            <span
-              className="w-2 h-2 rounded-full"
+          {/* ── Availability badge — dos estados según employment_status ── */}
+          {profile === null ? (
+            /* Placeholder mientras carga (evita layout shift) */
+            <div className="w-48 h-8 rounded-full mb-6" style={{ background: 'rgba(255,255,255,0.04)' }} />
+          ) : profile.employment_status ? (
+            /* ── TRUE: Disponible ── verde */
+            <div
+              className="flex items-center gap-3 w-fit mb-6"
               style={{
-                background: 'var(--color-console-green)',
-                boxShadow: '0 0 6px var(--color-console-green)',
-                animation: 'pulse 2s infinite',
+                background: 'rgba(201,169,110,0.08)',
+                border: '1px solid rgba(201,169,110,0.22)',
+                borderRadius: '99px',
+                padding: '6px 18px',
               }}
-            />
-            <span
-              className="font-mono text-xs font-semibold tracking-widest uppercase"
-              style={{ color: 'var(--color-accent-gold)' }}
             >
-              Disponible para oportunidades
-            </span>
-          </div>
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background: 'var(--color-console-green)',
+                  boxShadow: '0 0 6px var(--color-console-green)',
+                  animation: 'pulse 2s infinite',
+                }}
+              />
+              <span
+                className="font-mono text-xs font-semibold tracking-widest uppercase"
+                style={{ color: 'var(--color-accent-gold)' }}
+              >
+                Disponible para oportunidades
+              </span>
+            </div>
+          ) : (
+            /* ── FALSE: Ocupado ── gris neutro */
+            <div
+              className="flex items-center gap-3 w-fit mb-6"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '99px',
+                padding: '6px 18px',
+              }}
+            >
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background: 'rgba(180,180,180,0.6)',
+                }}
+              />
+              <span
+                className="font-mono text-xs font-semibold tracking-widest uppercase"
+                style={{ color: 'rgba(200,200,200,0.55)' }}
+              >
+                Trabajando en proyectos
+              </span>
+            </div>
+          )}
 
           {/* Hello tag */}
           <p
@@ -178,7 +215,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             &lt; hello, I'm /&gt;
           </p>
 
-          {/* Name — ONE LINE */}
+          {/* Name */}
           <h1
             className="font-black leading-[1.0] tracking-tight mb-4 whitespace-nowrap"
             style={{
@@ -186,8 +223,8 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               color: 'var(--color-text-primary)',
             }}
           >
-            Alexander{' '}
-            <span className="text-gradient-gold">Lee</span>
+            {profile?.name || 'Alexander'}{' '}
+            <span className="text-gradient-gold">{profile?.last_name || 'Lee'}</span>
           </h1>
 
           {/* Role typewriter */}
@@ -206,7 +243,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             />
           </div>
 
-          {/* Description */}
+          {/* Description — desde la BD si está disponible */}
           <p
             className="text-sm md:text-base leading-relaxed mb-8"
             style={{
@@ -214,9 +251,8 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               maxWidth: '440px',
             }}
           >
-            Estudiante de Ingeniería de Software con IA en SENATI y Data Engineer Intern
-            en OPCOMP E.I.R.L. Apasionado por construir pipelines de datos escalables,
-            APIs de alto rendimiento y experiencias web memorables.
+            {profile?.description ||
+              'Estudiante de Ingeniería de Software con IA en SENATI y Data Engineer Intern en OPCOMP E.I.R.L. Apasionado por construir pipelines de datos escalables, APIs de alto rendimiento y experiencias web memorables.'}
           </p>
 
           {/* CTA Buttons */}
@@ -238,37 +274,51 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             </button>
           </div>
 
-          {/* Social links */}
+          {/* Social links — URLs dinámicas desde la BD */}
           <div className="flex items-center gap-5">
             <a
-              href="https://github.com/alexlee-dev"
+              href={githubUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-icon"
               aria-label="GitHub"
+              style={!profile?.github_url ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
             >
               <GitHubIcon size={15} />
               GitHub
             </a>
             <a
-              href="https://linkedin.com/in/alexander-lee"
+              href={linkedinUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-icon"
               aria-label="LinkedIn"
+              style={!profile?.linkedin_url ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
             >
               <LinkedInIcon size={15} />
               LinkedIn
             </a>
-            <a
-              href="/cv-alexander-lee.pdf"
-              download
-              className="btn-icon"
-              aria-label="Descargar CV"
-            >
-              <Download size={15} />
-              CV
-            </a>
+            {cvUrl ? (
+              <a
+                href={cvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-icon"
+                aria-label="Ver CV"
+              >
+                <Download size={15} />
+                CV
+              </a>
+            ) : (
+              <span
+                className="btn-icon"
+                style={{ opacity: 0.35, cursor: 'not-allowed' }}
+                title="CV no disponible aún"
+              >
+                <Download size={15} />
+                CV
+              </span>
+            )}
           </div>
 
           {/* Scroll hint */}

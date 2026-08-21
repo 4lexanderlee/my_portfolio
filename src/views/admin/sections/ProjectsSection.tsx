@@ -54,7 +54,7 @@ const SkillMultiSelect: React.FC<SkillMultiSelectProps> = ({ allSkills, selected
                       cursor: 'pointer',
                     }}
                   >
-                    {skill.name}
+                    {skill.skill_name}
                   </button>
                 );
               })}

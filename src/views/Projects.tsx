@@ -70,7 +70,7 @@ const Projects: React.FC = () => {
             (p.subtitle ?? '').toLowerCase().includes(q) ||
             (p.description ?? '').toLowerCase().includes(q) ||
             (p.skill_ids ?? []).some((id) =>
-              (skillsMap[id]?.name ?? '').toLowerCase().includes(q)
+              (skillsMap[id]?.skill_name ?? '').toLowerCase().includes(q)
             )
         )
       : [...projects];
@@ -158,7 +158,7 @@ const Projects: React.FC = () => {
           filteredProjects.map((proj, index) => {
             const isExpanded = expanded === proj.id;
             const accentColor = proj.accent_color ?? '#c9a96e';
-            const projSkills = (proj.skill_ids ?? []).map((id) => skillsMap[id]?.name).filter(Boolean) as string[];
+            const projSkills = (proj.skill_ids ?? []).map((id) => skillsMap[id]?.skill_name).filter(Boolean) as string[];
 
             return (
               <GlassCard

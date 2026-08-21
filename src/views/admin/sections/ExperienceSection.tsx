@@ -165,9 +165,9 @@ const ExperienceSection: React.FC = () => {
           <InputField label="Ubicación" id="exp-location" error={errors.location} registration={register('location')} placeholder="Lima, PE" />
 
           <div className="grid grid-cols-2 gap-4">
-            <InputField label="Fecha de Inicio" id="exp-start-date" type="month" required error={errors.start_date} registration={register('start_date', { required: 'Campo requerido' })} />
+            <InputField label="Fecha de Inicio" id="exp-start-date" type="date" required error={errors.start_date} registration={register('start_date', { required: 'Campo requerido' })} />
             {!isCurrent && (
-              <InputField label="Fecha de Fin" id="exp-end-date" type="month" error={errors.end_date} registration={register('end_date')} />
+              <InputField label="Fecha de Fin" id="exp-end-date" type="date" error={errors.end_date} registration={register('end_date')} />
             )}
           </div>
 

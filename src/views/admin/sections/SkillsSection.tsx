@@ -57,7 +57,7 @@ const SkillsSection: React.FC = () => {
 
   const openEdit = (row: AdminSkill) => {
     setEditTarget(row);
-    reset({ name: row.name, category: row.category, icon_url: row.icon_url });
+    reset({ name: row.name, category: row.category });
     setSlideOpen(true);
   };
 
@@ -126,7 +126,6 @@ const SkillsSection: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <InputField label="Nombre" id="skill-name" required error={errors.name} registration={register('name', { required: 'Campo requerido' })} placeholder="Python" />
           <SelectField label="Categoría" id="skill-category" required error={errors.category} registration={register('category', { required: 'Campo requerido' })} options={CATEGORY_OPTIONS} />
-          <InputField label="URL del Ícono (opcional)" id="skill-icon" type="url" error={errors.icon_url} registration={register('icon_url')} placeholder="https://..." />
           <div className="flex gap-3 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={() => setSlideOpen(false)} className="btn-ghost flex-1">Cancelar</button>
             <button id="btn-skill-save" type="submit" className="btn-primary flex-1 flex items-center justify-center gap-2" disabled={saving}>

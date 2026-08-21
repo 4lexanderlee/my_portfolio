@@ -1,23 +1,20 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, ExternalLink } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { educationService } from '../../../services/api';
-import type { AdminEducation, AdminEducationPayload, EducationStatus } from '../../../types';
+import type { AdminEducation, AdminEducationPayload } from '../../../types';
 import DataTable, { type Column } from '../../../components/admin/DataTable';
 import SlideOver from '../../../components/admin/SlideOver';
 import ConfirmDialog from '../../../components/admin/ConfirmDialog';
-import { InputField, SelectField, ToggleField } from '../../../components/admin/FormField';
+import { InputField, ToggleField } from '../../../components/admin/FormField';
 
-const STATUS_OPTIONS: { value: EducationStatus; label: string }[] = [
-  { value: 'in_progress', label: 'En Curso' },
-  { value: 'completed',   label: 'Completado' },
-  { value: 'dropped',     label: 'Abandonado' },
-];
-
-const STATUS_STYLES: Record<EducationStatus, { bg: string; color: string; border: string }> = {
-  in_progress: { bg: 'rgba(59,130,246,0.1)',  color: '#60a5fa', border: 'rgba(59,130,246,0.25)' },
-  completed:   { bg: 'rgba(74,222,128,0.1)',  color: '#4ade80', border: 'rgba(74,222,128,0.25)' },
-  dropped:     { bg: 'rgba(239,68,68,0.1)',   color: '#f87171', border: 'rgba(239,68,68,0.25)' },
+// ── Form values simplificado ───────────────────────────────────────────────
+type EducationFormValues = {
+  institution: string;
+  degree: string;
+  field_of_study: string;
+  start_date: string;
+  end_date: string;
 };
 
 const EducationSection: React.FC = () => {
@@ -30,7 +27,7 @@ const EducationSection: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [isInProgress, setIsInProgress] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<AdminEducationPayload>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<EducationFormValues>();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -42,8 +39,8 @@ const EducationSection: React.FC = () => {
 
   const openCreate = () => {
     setEditTarget(null);
-    setIsInProgress(false);
-    reset({ institution: '', degree: '', field_of_study: '', start_date: '', end_date: '', status: 'in_progress', institution_url: '', certificate_url: '' });
+    setIsInProgress(true);
+    reset({ institution: '', degree: '', field_of_study: '', start_date: '', end_date: '' });
     setSlideOpen(true);
   };
 
@@ -51,20 +48,27 @@ const EducationSection: React.FC = () => {
     setEditTarget(row);
     setIsInProgress(row.status === 'in_progress');
     reset({
-      institution: row.institution, degree: row.degree, field_of_study: row.field_of_study,
-      start_date: row.start_date, end_date: row.end_date ?? '', status: row.status,
-      institution_url: row.institution_url ?? '', certificate_url: row.certificate_url ?? '',
+      institution: row.institution,
+      degree: row.degree,
+      field_of_study: row.field_of_study,
+      start_date: row.start_date,
+      end_date: row.end_date ?? '',
     });
     setSlideOpen(true);
   };
 
-  const onSubmit = async (data: AdminEducationPayload) => {
+  const onSubmit = async (data: EducationFormValues) => {
     setSaving(true);
     try {
       const payload: AdminEducationPayload = {
-        ...data,
-        status: isInProgress ? 'in_progress' : data.status,
+        institution: data.institution,
+        degree: data.degree,
+        field_of_study: data.field_of_study,
+        start_date: data.start_date,
         end_date: isInProgress ? null : data.end_date || null,
+        status: isInProgress ? 'in_progress' : 'completed',
+        institution_url: '',
+        certificate_url: '',
       };
       if (editTarget) {
         const updated = await educationService.update(editTarget.id, payload);
@@ -74,6 +78,8 @@ const EducationSection: React.FC = () => {
         setRows((prev) => [...prev, created]);
       }
       setSlideOpen(false);
+    } catch (e) {
+      console.error(e);
     } finally { setSaving(false); }
   };
 
@@ -109,20 +115,17 @@ const EducationSection: React.FC = () => {
     {
       key: 'status', header: 'Estado', width: '120px',
       render: (row) => {
-        const st = STATUS_STYLES[row.status];
-        const label = STATUS_OPTIONS.find((o) => o.value === row.status)?.label ?? row.status;
+        const isActive = row.status === 'in_progress';
         return (
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: st.bg, color: st.color, border: `1px solid ${st.border}` }}>
-            {label}
+          <span className="text-xs px-2 py-0.5 rounded-full"
+            style={isActive
+              ? { background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }
+              : { background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)' }
+            }>
+            {isActive ? 'En Curso' : 'Completado'}
           </span>
         );
       },
-    },
-    {
-      key: 'institution_url', header: 'Link', width: '70px',
-      render: (row) => row.institution_url
-        ? <a href={row.institution_url} target="_blank" rel="noreferrer" style={{ color: 'var(--color-accent-gold)' }}><ExternalLink size={13} /></a>
-        : <span style={{ color: 'var(--color-text-dim)' }}>—</span>,
     },
   ];
 
@@ -146,17 +149,13 @@ const EducationSection: React.FC = () => {
           <InputField label="Título / Grado" id="edu-degree" required error={errors.degree} registration={register('degree', { required: 'Campo requerido' })} placeholder="Ingeniería de Software con IA" />
           <InputField label="Campo de Estudio" id="edu-field" error={errors.field_of_study} registration={register('field_of_study')} placeholder="Software Engineering & AI" />
           <div className="grid grid-cols-2 gap-4">
-            <InputField label="Fecha de Inicio" id="edu-start" type="month" required error={errors.start_date} registration={register('start_date', { required: 'Campo requerido' })} />
+            <InputField label="Fecha de Inicio" id="edu-start" type="date" required error={errors.start_date} registration={register('start_date', { required: 'Campo requerido' })} />
             {!isInProgress && (
-              <InputField label="Fecha de Fin" id="edu-end" type="month" error={errors.end_date} registration={register('end_date')} />
+              <InputField label="Fecha de Fin" id="edu-end" type="date" error={errors.end_date} registration={register('end_date')} />
             )}
           </div>
           <ToggleField id="edu-in-progress" label="Actualmente en curso" description="Muestra 'Presente' como fecha de fin" checked={isInProgress} onChange={setIsInProgress} />
-          {!isInProgress && (
-            <SelectField label="Estado" id="edu-status" error={errors.status} registration={register('status')} options={STATUS_OPTIONS} />
-          )}
-          <InputField label="URL de la Institución" id="edu-inst-url" type="url" error={errors.institution_url} registration={register('institution_url')} placeholder="https://www.senati.edu.pe" />
-          <InputField label="URL del Certificado" id="edu-cert-url" type="url" error={errors.certificate_url} registration={register('certificate_url')} placeholder="https://..." hint="Opcional" />
+
           <div className="flex gap-3 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={() => setSlideOpen(false)} className="btn-ghost flex-1">Cancelar</button>
             <button id="btn-edu-save" type="submit" className="btn-primary flex-1 flex items-center justify-center gap-2" disabled={saving}>

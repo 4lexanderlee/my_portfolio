@@ -8,8 +8,11 @@ import SlideOver from '../../../components/admin/SlideOver';
 import ConfirmDialog from '../../../components/admin/ConfirmDialog';
 import { InputField } from '../../../components/admin/FormField';
 
+// DataTable requiere que cada fila tenga { id: string }; adaptamos AdminIam
+type IamRow = AdminIam & { id: string };
+
 const IamSection: React.FC = () => {
-  const [rows, setRows] = useState<AdminIam[]>([]);
+  const [rows, setRows] = useState<IamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [slideOpen, setSlideOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminIam | null>(null);
@@ -23,7 +26,8 @@ const IamSection: React.FC = () => {
     setLoading(true);
     try {
       const data = await iamService.list();
-      setRows(data);
+      // Normalize: give each row an 'id' alias for DataTable compatibility
+      setRows(data.map((r) => ({ ...r, id: r.iam_id })));
     } catch (error) {
       console.error(error);
     } finally {
@@ -52,10 +56,12 @@ const IamSection: React.FC = () => {
     try {
       if (editTarget) {
         const updated = await iamService.update(editTarget.iam_id, data);
-        setRows((prev) => prev.map((r) => (r.iam_id === editTarget.iam_id ? updated : r)));
+        const row: IamRow = { ...updated, id: updated.iam_id };
+        setRows((prev) => prev.map((r) => (r.iam_id === editTarget.iam_id ? row : r)));
       } else {
         const created = await iamService.create(data);
-        setRows((prev) => [...prev, created]);
+        const row: IamRow = { ...created, id: created.iam_id };
+        setRows((prev) => [...prev, row]);
       }
       setSlideOpen(false);
     } catch (error) {
@@ -79,7 +85,7 @@ const IamSection: React.FC = () => {
     }
   };
 
-  const columns: Column<AdminIam>[] = [
+  const columns: Column<IamRow>[] = [
     {
       key: 'occupation_name',
       header: 'Ocupación',
@@ -117,10 +123,10 @@ const IamSection: React.FC = () => {
 
       <DataTable
         columns={columns}
-        rows={rows}
+        rows={rows as IamRow[]}
         loading={loading}
-        onEdit={openEdit}
-        onDelete={setDeleteTarget}
+        onEdit={(row) => openEdit(row)}
+        onDelete={(row) => setDeleteTarget(row)}
         emptyMessage="No hay ocupaciones registradas."
       />
 

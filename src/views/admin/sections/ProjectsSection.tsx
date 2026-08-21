@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Star, ExternalLink } from 'lucide-react';
+import { Plus, Star, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import { projectsService, skillsService } from '../../../services/api';
-import { uploadImage } from '../../../services/storage';
+import { uploadFile } from '../../../services/storage';
 import type { AdminProject, AdminProjectPayload, AdminSkill } from '../../../types';
 import DataTable, { type Column } from '../../../components/admin/DataTable';
 import SlideOver from '../../../components/admin/SlideOver';
@@ -24,7 +24,6 @@ const SkillMultiSelect: React.FC<SkillMultiSelectProps> = ({ allSkills, selected
         : [...selectedIds, id]
     );
   };
-
   const categories = [...new Set(allSkills.map((s) => s.category))];
 
   return (
@@ -35,15 +34,10 @@ const SkillMultiSelect: React.FC<SkillMultiSelectProps> = ({ allSkills, selected
           ({selectedIds.length} seleccionadas)
         </span>
       </label>
-      <div
-        className="rounded-xl p-3 flex flex-col gap-3"
-        style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}
-      >
+      <div className="rounded-xl p-3 flex flex-col gap-3" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
         {categories.map((cat) => (
           <div key={cat}>
-            <p className="text-xs mb-2 capitalize" style={{ color: 'var(--color-text-dim)' }}>
-              {cat.replace('_', ' ')}
-            </p>
+            <p className="text-xs mb-2 capitalize" style={{ color: 'var(--color-text-dim)' }}>{cat.replace('_', ' ')}</p>
             <div className="flex flex-wrap gap-1.5">
               {allSkills.filter((s) => s.category === cat).map((skill) => {
                 const active = selectedIds.includes(skill.id);
@@ -72,8 +66,55 @@ const SkillMultiSelect: React.FC<SkillMultiSelectProps> = ({ allSkills, selected
   );
 };
 
+// ── File Picker ────────────────────────────────────────────────────────────
+interface FilePickerProps {
+  label: string;
+  accept?: string;
+  file: File | null;
+  currentUrl?: string;
+  onChange: (f: File | null) => void;
+  hint?: string;
+}
+
+const FilePicker: React.FC<FilePickerProps> = ({ label, accept = 'image/png,image/webp,image/*', file, currentUrl, onChange, hint }) => {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>{label}</label>
+      <div
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-colors"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={() => ref.current?.click()}
+      >
+        <ImageIcon size={15} style={{ color: 'var(--color-accent-gold)', flexShrink: 0 }} />
+        <span className="text-sm truncate flex-1" style={{ color: file ? 'var(--color-text-primary)' : 'var(--color-text-dim)' }}>
+          {file ? file.name : currentUrl ? 'Imagen actual — clic para reemplazar' : 'Seleccionar imagen PNG...'}
+        </span>
+        <input ref={ref} type="file" accept={accept} className="hidden" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+      </div>
+      {currentUrl && !file && (
+        <div className="flex items-center gap-2">
+          <img src={currentUrl} alt="preview" className="w-8 h-8 object-contain rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+          <span className="text-xs" style={{ color: 'var(--color-console-green)' }}>Imagen guardada</span>
+        </div>
+      )}
+      {hint && <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>{hint}</p>}
+    </div>
+  );
+};
+
 // ── Form Values ────────────────────────────────────────────────────────────
-type ProjectFormValues = Omit<AdminProjectPayload, 'skill_ids' | 'is_current' | 'is_featured'>;
+type ProjectFormValues = {
+  title: string;
+  subtitle: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  github_url: string;
+  video_url: string;
+  drive_url: string;
+  web_url: string;
+};
 
 // ── Main Component ─────────────────────────────────────────────────────────
 const ProjectsSection: React.FC = () => {
@@ -88,14 +129,10 @@ const ProjectsSection: React.FC = () => {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isCurrent, setIsCurrent] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [iconFile, setIconFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ProjectFormValues>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ProjectFormValues>();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -115,12 +152,9 @@ const ProjectsSection: React.FC = () => {
     setIsFeatured(false);
     setIsCurrent(false);
     setSelectedSkillIds([]);
+    setIconFile(null);
     setImageFile(null);
-    reset({
-      title: '', subtitle: '', description: '', long_description: '',
-      start_date: '', end_date: '', accent_color: '#c9a96e', icon: '🚀',
-      image_url: '', logo_url: '', github_url: '', video_url: '', drive_url: '', web_url: '',
-    });
+    reset({ title: '', subtitle: '', description: '', start_date: '', end_date: '', github_url: '', video_url: '', drive_url: '', web_url: '' });
     setSlideOpen(true);
   };
 
@@ -129,15 +163,18 @@ const ProjectsSection: React.FC = () => {
     setIsFeatured(row.is_featured);
     setIsCurrent(row.is_current);
     setSelectedSkillIds(row.skill_ids);
+    setIconFile(null);
     setImageFile(null);
     reset({
-      title: row.title, subtitle: row.subtitle,
-      description: row.description, long_description: row.long_description,
-      start_date: row.start_date, end_date: row.end_date ?? '',
-      accent_color: row.accent_color, icon: row.icon,
-      image_url: row.image_url ?? '', logo_url: row.logo_url ?? '',
-      github_url: row.github_url ?? '', video_url: row.video_url ?? '',
-      drive_url: row.drive_url ?? '', web_url: row.web_url ?? '',
+      title: row.title,
+      subtitle: row.subtitle,
+      description: row.description,
+      start_date: row.start_date,
+      end_date: row.end_date ?? '',
+      github_url: row.github_url ?? '',
+      video_url: row.video_url ?? '',
+      drive_url: row.drive_url ?? '',
+      web_url: row.web_url ?? '',
     });
     setSlideOpen(true);
   };
@@ -145,19 +182,32 @@ const ProjectsSection: React.FC = () => {
   const onSubmit = async (data: ProjectFormValues) => {
     setSaving(true);
     try {
-      let finalImageUrl = data.image_url;
+      // Subir icono PNG si se seleccionó uno
+      let iconUrl = editTarget?.icon ?? '';
+      if (iconFile) {
+        iconUrl = await uploadFile(iconFile, 'project-icons');
+      }
+
+      // Subir imagen del proyecto si se seleccionó una
+      let imageUrl = editTarget?.image_url ?? '';
       if (imageFile) {
-        finalImageUrl = await uploadImage(imageFile, 'projects');
+        imageUrl = await uploadFile(imageFile, 'projects');
       }
 
       const payload: AdminProjectPayload = {
         ...data,
-        image_url: finalImageUrl,
+        // description es el único campo de descripción
+        long_description: data.description,
+        icon: iconUrl,
+        image_url: imageUrl,
+        logo_url: '',
+        accent_color: '#c9a96e', // valor por defecto, el usuario no lo edita
         is_featured: isFeatured,
         is_current: isCurrent,
         end_date: isCurrent ? null : data.end_date || null,
         skill_ids: selectedSkillIds,
       };
+
       if (editTarget) {
         const updated = await projectsService.update(editTarget.id, payload);
         setRows((prev) => prev.map((r) => (r.id === editTarget.id ? updated : r)));
@@ -166,6 +216,8 @@ const ProjectsSection: React.FC = () => {
         setRows((prev) => [...prev, created]);
       }
       setSlideOpen(false);
+    } catch (e) {
+      console.error(e);
     } finally {
       setSaving(false);
     }
@@ -188,7 +240,11 @@ const ProjectsSection: React.FC = () => {
       key: 'title', header: 'Proyecto',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <span className="text-lg">{row.icon}</span>
+          {row.icon && row.icon.startsWith('http') ? (
+            <img src={row.icon} alt={row.title} className="w-8 h-8 object-contain rounded-lg flex-shrink-0" />
+          ) : (
+            <span className="text-lg">{row.icon || '🚀'}</span>
+          )}
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>{row.title}</p>
             <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{row.subtitle}</p>
@@ -238,14 +294,7 @@ const ProjectsSection: React.FC = () => {
         </button>
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        loading={loading}
-        onEdit={openEdit}
-        onDelete={setDeleteTarget}
-        emptyMessage="No hay proyectos registrados. ¡Añade el primero!"
-      />
+      <DataTable columns={columns} rows={rows} loading={loading} onEdit={openEdit} onDelete={setDeleteTarget} emptyMessage="No hay proyectos registrados. ¡Añade el primero!" />
 
       {/* ── Slide-over Form ──── */}
       <SlideOver
@@ -261,17 +310,24 @@ const ProjectsSection: React.FC = () => {
             <p className="admin-card-title">Información General</p>
             <InputField label="Título" id="proj-title" required error={errors.title} registration={register('title', { required: 'Campo requerido' })} placeholder="MarketPulse ETL" />
             <InputField label="Subtítulo" id="proj-subtitle" error={errors.subtitle} registration={register('subtitle')} placeholder="Pipeline Data Lakehouse Financiero" />
-            <TextareaField label="Descripción corta" id="proj-desc" rows={3} error={errors.description} registration={register('description')} placeholder="Descripción breve que aparece en las tarjetas..." />
-            <TextareaField label="Descripción larga" id="proj-long-desc" rows={5} error={errors.long_description} registration={register('long_description')} placeholder="Descripción detallada para el modal del proyecto..." />
+            <TextareaField
+              label="Descripción"
+              id="proj-desc"
+              rows={5}
+              required
+              error={errors.description}
+              registration={register('description', { required: 'La descripción es requerida' })}
+              placeholder="Describe el proyecto, tecnologías utilizadas y tu rol en él..."
+            />
           </div>
 
           {/* Dates & Status */}
           <div className="admin-card">
             <p className="admin-card-title">Fechas y Estado</p>
             <div className="grid grid-cols-2 gap-4">
-              <InputField label="Fecha Inicio" id="proj-start" type="month" required error={errors.start_date} registration={register('start_date', { required: 'Campo requerido' })} />
+              <InputField label="Fecha de Inicio" id="proj-start" type="date" required error={errors.start_date} registration={register('start_date', { required: 'Campo requerido' })} />
               {!isCurrent && (
-                <InputField label="Fecha Fin" id="proj-end" type="month" error={errors.end_date} registration={register('end_date')} />
+                <InputField label="Fecha de Fin" id="proj-end" type="date" error={errors.end_date} registration={register('end_date')} />
               )}
             </div>
             <ToggleField id="proj-is-current" label="Proyecto en desarrollo" description="Muestra 'Presente' como fecha de fin" checked={isCurrent} onChange={setIsCurrent} />
@@ -281,32 +337,22 @@ const ProjectsSection: React.FC = () => {
           {/* Visual */}
           <div className="admin-card">
             <p className="admin-card-title">Identidad Visual</p>
-            <div className="grid grid-cols-2 gap-4">
-              <InputField label="Emoji / Ícono" id="proj-icon" error={errors.icon} registration={register('icon')} placeholder="🚀" />
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>Color Acento</label>
-                <div className="flex items-center gap-3">
-                  <input id="proj-accent-color" type="color" {...register('accent_color')} style={{ width: '44px', height: '40px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', cursor: 'pointer' }} />
-                  <input type="text" className="input-dark flex-1 text-sm font-mono" {...register('accent_color')} placeholder="#c9a96e" />
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-1.5 mt-2">
-              <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>Imagen del Proyecto</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="input-dark text-sm w-full"
-                style={{ paddingTop: '8px' }}
-              />
-              {editTarget && editTarget.image_url && !imageFile && (
-                <span className="text-xs" style={{ color: 'var(--color-console-green)' }}>
-                  Imagen actual cargada. Sube una nueva para reemplazarla.
-                </span>
-              )}
-            </div>
-            <InputField label="URL del Logo" id="proj-logo-url" type="url" error={errors.logo_url} registration={register('logo_url')} placeholder="https://..." />
+            <FilePicker
+              label="Ícono / Logo (PNG)"
+              accept="image/png,image/webp,image/svg+xml"
+              file={iconFile}
+              currentUrl={editTarget?.icon?.startsWith('http') ? editTarget.icon : undefined}
+              onChange={setIconFile}
+              hint="Imagen PNG o SVG que representa el proyecto"
+            />
+            <FilePicker
+              label="Imagen de Portada"
+              accept="image/*"
+              file={imageFile}
+              currentUrl={editTarget?.image_url ?? undefined}
+              onChange={setImageFile}
+              hint="Imagen principal del proyecto (banner, screenshot)"
+            />
           </div>
 
           {/* URLs */}
@@ -318,7 +364,7 @@ const ProjectsSection: React.FC = () => {
             <InputField label="Google Drive" id="proj-drive" type="url" error={errors.drive_url} registration={register('drive_url')} placeholder="https://drive.google.com/..." />
           </div>
 
-          {/* Skills Multi-Select */}
+          {/* Skills */}
           <div className="admin-card">
             <SkillMultiSelect allSkills={allSkills} selectedIds={selectedSkillIds} onChange={setSelectedSkillIds} />
           </div>

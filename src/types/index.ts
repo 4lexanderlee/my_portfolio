@@ -213,8 +213,7 @@ export interface AdminCertification {
   name: string;
   issuer: string;
   issued_date: string;  // ISO: "2022-06"
-  expiry_date?: string | null;
-  credential_url?: string;
+  credential_url: string;  // requerido
   icon?: string;
   created_at?: string;
 }

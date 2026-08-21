@@ -1,12 +1,50 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, ExternalLink } from 'lucide-react';
+import { Plus, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import { certificationsService } from '../../../services/api';
+import { uploadFile } from '../../../services/storage';
 import type { AdminCertification, AdminCertificationPayload } from '../../../types';
 import DataTable, { type Column } from '../../../components/admin/DataTable';
 import SlideOver from '../../../components/admin/SlideOver';
 import ConfirmDialog from '../../../components/admin/ConfirmDialog';
 import { InputField } from '../../../components/admin/FormField';
+
+// ── File Picker ────────────────────────────────────────────────────────────
+interface FilePickerProps {
+  label: string;
+  accept?: string;
+  file: File | null;
+  currentUrl?: string;
+  onChange: (f: File | null) => void;
+  hint?: string;
+}
+
+const FilePicker: React.FC<FilePickerProps> = ({ label, accept = 'image/png,image/webp,image/*', file, currentUrl, onChange, hint }) => {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>{label}</label>
+      <div
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-colors"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={() => ref.current?.click()}
+      >
+        <ImageIcon size={15} style={{ color: 'var(--color-accent-gold)', flexShrink: 0 }} />
+        <span className="text-sm truncate flex-1" style={{ color: file ? 'var(--color-text-primary)' : 'var(--color-text-dim)' }}>
+          {file ? file.name : currentUrl ? 'Imagen actual — clic para reemplazar' : 'Seleccionar imagen PNG...'}
+        </span>
+        <input ref={ref} type="file" accept={accept} className="hidden" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+      </div>
+      {currentUrl && !file && (
+        <div className="flex items-center gap-2">
+          <img src={currentUrl} alt="icono" className="w-8 h-8 object-contain rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+          <span className="text-xs" style={{ color: 'var(--color-console-green)' }}>Imagen guardada</span>
+        </div>
+      )}
+      {hint && <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>{hint}</p>}
+    </div>
+  );
+};
 
 const CertificationsSection: React.FC = () => {
   const [rows, setRows] = useState<AdminCertification[]>([]);
@@ -16,8 +54,9 @@ const CertificationsSection: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<AdminCertification | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [iconFile, setIconFile] = useState<File | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<AdminCertificationPayload>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<Omit<AdminCertificationPayload, 'icon'>>();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -29,27 +68,39 @@ const CertificationsSection: React.FC = () => {
 
   const openCreate = () => {
     setEditTarget(null);
-    reset({ name: '', issuer: '', issued_date: '', expiry_date: '', credential_url: '', icon: '' });
+    setIconFile(null);
+    reset({ name: '', issuer: '', issued_date: '', credential_url: '' });
     setSlideOpen(true);
   };
 
   const openEdit = (row: AdminCertification) => {
     setEditTarget(row);
-    reset({ name: row.name, issuer: row.issuer, issued_date: row.issued_date, expiry_date: row.expiry_date ?? '', credential_url: row.credential_url ?? '', icon: row.icon ?? '' });
+    setIconFile(null);
+    reset({ name: row.name, issuer: row.issuer, issued_date: row.issued_date, credential_url: row.credential_url ?? '' });
     setSlideOpen(true);
   };
 
-  const onSubmit = async (data: AdminCertificationPayload) => {
+  const onSubmit = async (data: Omit<AdminCertificationPayload, 'icon'>) => {
     setSaving(true);
     try {
+      // Subir icono PNG al bucket si se seleccionó uno
+      let iconUrl = editTarget?.icon ?? '';
+      if (iconFile) {
+        iconUrl = await uploadFile(iconFile, 'cert-icons');
+      }
+
+      const payload: AdminCertificationPayload = { ...data, icon: iconUrl };
+
       if (editTarget) {
-        const updated = await certificationsService.update(editTarget.id, data);
+        const updated = await certificationsService.update(editTarget.id, payload);
         setRows((prev) => prev.map((r) => (r.id === editTarget.id ? updated : r)));
       } else {
-        const created = await certificationsService.create(data);
+        const created = await certificationsService.create(payload);
         setRows((prev) => [...prev, created]);
       }
       setSlideOpen(false);
+    } catch (e) {
+      console.error(e);
     } finally { setSaving(false); }
   };
 
@@ -63,12 +114,19 @@ const CertificationsSection: React.FC = () => {
     } finally { setDeleting(false); }
   };
 
+  // Helper: detect if icon is a URL or a text emoji
+  const isIconUrl = (icon?: string) => icon?.startsWith('http');
+
   const columns: Column<AdminCertification>[] = [
     {
       key: 'name', header: 'Certificación',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <span className="text-xl">{row.icon || '📜'}</span>
+          {isIconUrl(row.icon) ? (
+            <img src={row.icon} alt={row.name} className="w-7 h-7 object-contain rounded-lg flex-shrink-0" />
+          ) : (
+            <span className="text-xl">{row.icon || '📜'}</span>
+          )}
           <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{row.name}</span>
         </div>
       ),
@@ -76,9 +134,7 @@ const CertificationsSection: React.FC = () => {
     { key: 'issuer', header: 'Institución Emisora' },
     {
       key: 'issued_date', header: 'Fecha', width: '120px',
-      render: (row) => (
-        <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>{row.issued_date}</span>
-      ),
+      render: (row) => <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>{row.issued_date}</span>,
     },
     {
       key: 'credential_url', header: 'Credencial', width: '90px',
@@ -106,12 +162,16 @@ const CertificationsSection: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <InputField label="Nombre de la Certificación" id="cert-name" required error={errors.name} registration={register('name', { required: 'Campo requerido' })} placeholder="Python Essentials 1 & 2" />
           <InputField label="Institución Emisora" id="cert-issuer" required error={errors.issuer} registration={register('issuer', { required: 'Campo requerido' })} placeholder="Cisco Networking Academy" />
-          <div className="grid grid-cols-2 gap-4">
-            <InputField label="Fecha de Emisión" id="cert-issued" type="month" required error={errors.issued_date} registration={register('issued_date', { required: 'Campo requerido' })} />
-            <InputField label="Fecha de Expiración" id="cert-expiry" type="month" error={errors.expiry_date} registration={register('expiry_date')} hint="Opcional" />
-          </div>
-          <InputField label="URL de la Credencial" id="cert-url" type="url" error={errors.credential_url} registration={register('credential_url')} placeholder="https://..." />
-          <InputField label="Emoji / Ícono" id="cert-icon" error={errors.icon} registration={register('icon')} placeholder="🐍" hint="Emoji representativo de la certificación" />
+          <InputField label="Fecha de Emisión" id="cert-issued" type="date" required error={errors.issued_date} registration={register('issued_date', { required: 'Campo requerido' })} />
+          <InputField label="URL de la Credencial" id="cert-url" type="url" required error={errors.credential_url} registration={register('credential_url', { required: 'El enlace de credencial es requerido' })} placeholder="https://..." />
+          <FilePicker
+            label="Ícono / Logo (PNG)"
+            accept="image/png,image/webp,image/svg+xml"
+            file={iconFile}
+            currentUrl={isIconUrl(editTarget?.icon) ? editTarget?.icon : undefined}
+            onChange={setIconFile}
+            hint="Imagen PNG del logo o insignia de la certificación"
+          />
           <div className="flex gap-3 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={() => setSlideOpen(false)} className="btn-ghost flex-1">Cancelar</button>
             <button id="btn-cert-save" type="submit" className="btn-primary flex-1 flex items-center justify-center gap-2" disabled={saving}>
